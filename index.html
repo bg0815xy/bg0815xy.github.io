@@ -1,0 +1,884 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Vokabel-Karteikasten</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Schibsted+Grotesk:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: eine schmale Spalte. Kopfzeile mit Name und Speicherstatus; darunter Deckliste, Deck (Üben | Karten), Lernsitzung, Ergebnis.
+   Die Lernkarte sieht aus wie eine echte Karteikarte: Linien, roter Rand, Fachangabe in der Kopfzeile. */
+:root {
+  --bg: #F1F3F6;
+  --surface: #FFFFFF;
+  --surface2: #E6EAF1;
+  --ink: #15202F;
+  --ink2: #566175;
+  --line: #D5DBE5;
+  --accent: #2547C9;
+  --accent-ink: #FFFFFF;
+  --accent-soft: #E3E9FF;
+  --good: #1B7F52;
+  --good-soft: #DDF3E8;
+  --bad: #BF3328;
+  --bad-soft: #FBE3E0;
+  --mid: #8F5E0C;
+  --mid-soft: #FBEFD5;
+  --rule: #CCD8F3;
+  --margin: #E48B8B;
+  --b0: #C3CBD9;
+  --b1: #A9BBF2;
+  --b2: #86A0EC;
+  --b3: #5F7ED9;
+  --b4: #3A5BCD;
+  --b5: #1D3AA8;
+  --shadow: rgba(20, 30, 60, .32);
+  --font-ui: 'Schibsted Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-card: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F141B; --surface: #18202B; --surface2: #222C3A; --ink: #E7ECF4; --ink2: #9AA6B8; --line: #2C3746;
+    --accent: #8DA6FF; --accent-ink: #0B1226; --accent-soft: #222F57;
+    --good: #4CC38A; --good-soft: #15332A; --bad: #FF7A6E; --bad-soft: #3A1E1E; --mid: #E3B25E; --mid-soft: #3A2F17;
+    --rule: #28344D; --margin: #8A4A52;
+    --b0: #3A4456; --b1: #3E508F; --b2: #4A64B8; --b3: #5F7DDA; --b4: #7C97F0; --b5: #A9BCFF;
+    --shadow: rgba(0, 0, 0, .6);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F141B; --surface: #18202B; --surface2: #222C3A; --ink: #E7ECF4; --ink2: #9AA6B8; --line: #2C3746;
+  --accent: #8DA6FF; --accent-ink: #0B1226; --accent-soft: #222F57;
+  --good: #4CC38A; --good-soft: #15332A; --bad: #FF7A6E; --bad-soft: #3A1E1E; --mid: #E3B25E; --mid-soft: #3A2F17;
+  --rule: #28344D; --margin: #8A4A52;
+  --b0: #3A4456; --b1: #3E508F; --b2: #4A64B8; --b3: #5F7DDA; --b4: #7C97F0; --b5: #A9BCFF;
+  --shadow: rgba(0, 0, 0, .6);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 16px/1.5 var(--font-ui);
+  padding-block: 12px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+h1, h2, h3, p { margin: 0; }
+h2 { font: 600 1.5rem/1.25 var(--font-ui); letter-spacing: -.01em; text-wrap: balance; }
+h3 { font: 600 1rem/1.3 var(--font-ui); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.muted { color: var(--ink2); }
+.app { max-width: 46rem; margin: 0 auto; }
+
+/* Kopfzeile */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 6px 22px; }
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.brand h1 { font: 600 1.05rem/1.2 var(--font-ui); letter-spacing: -.005em; }
+.save { display: flex; align-items: center; gap: 6px; font: 400 .72rem/1.2 var(--font-mono); color: var(--ink2); text-align: right; }
+.save i { width: 7px; height: 7px; border-radius: 50%; background: var(--ink2); flex: none; }
+.save[data-s="saved"] i { background: var(--good); }
+.save[data-s="error"] i { background: var(--bad); }
+.save[data-s="saving"] i { background: var(--mid); }
+
+/* Schaltflächen */
+.btn { appearance: none; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; padding: .6rem 1rem; font-weight: 600; cursor: pointer; min-height: 44px; line-height: 1.2; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { filter: brightness(1.07); }
+.btn.sm { min-height: 36px; padding: .35rem .75rem; font-size: .875rem; }
+.btn.danger { border-color: var(--bad); color: var(--bad); }
+.btn.danger.armed { background: var(--bad); color: var(--bg); }
+.btn.wide { width: 100%; }
+.btn[disabled] { opacity: .45; cursor: not-allowed; }
+.btn kbd, .hint { font: 500 .7rem/1 var(--font-mono); opacity: .75; margin-left: .5rem; }
+.link { appearance: none; background: none; border: 0; padding: .45rem 0; color: var(--accent); font-weight: 600; cursor: pointer; text-align: left; }
+.link:hover { text-decoration: underline; }
+.row-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+/* Formularfelder */
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field label, .lab { font: 500 .78rem/1.2 var(--font-mono); color: var(--ink2); letter-spacing: .02em; }
+.in, select.in, textarea.in { width: 100%; padding: .6rem .7rem; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-size: 16px; min-height: 44px; }
+textarea.in { min-height: 8rem; resize: vertical; font-family: var(--font-mono); font-size: 14px; line-height: 1.5; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 12px; }
+.err { color: var(--bad); font-size: .9rem; min-height: 0; }
+.msg { font-size: .9rem; padding: .55rem .8rem; border-radius: 8px; }
+.msg.ok { background: var(--good-soft); color: var(--good); }
+.msg.bad { background: var(--bad-soft); color: var(--bad); }
+.check { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+.check input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--accent); flex: none; }
+
+/* Startseite */
+.intro { display: flex; flex-direction: column; gap: 8px; padding-bottom: 20px; max-width: 36rem; }
+.intro p { color: var(--ink2); }
+.decks { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+.deck { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; width: 100%; text-align: left; padding: 16px 2px; background: none; border: 0; border-bottom: 1px solid var(--line); cursor: pointer; }
+.deck:hover .deck-name { color: var(--accent); }
+.deck-name { font: 600 1.1rem/1.3 var(--font-ui); display: block; overflow-wrap: anywhere; }
+.deck-meta { font: 400 .78rem/1.4 var(--font-mono); color: var(--ink2); display: block; overflow-wrap: anywhere; }
+.deck-today { font: 500 .75rem/1.2 var(--font-mono); color: var(--ink2); text-align: right; align-self: center; }
+.deck-today b { display: block; font: 600 1.5rem/1 var(--font-ui); color: var(--ink); }
+.boxbar { grid-column: 1 / -1; display: flex; gap: 2px; height: 6px; border-radius: 3px; overflow: hidden; background: var(--surface2); }
+.boxbar i { display: block; height: 100%; }
+.below { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; padding-top: 18px; }
+
+/* Deck */
+.crumb { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.deck-head { padding-block: 4px 4px; display: flex; flex-direction: column; gap: 4px; }
+.deck-head p { font: 400 .8rem/1.4 var(--font-mono); color: var(--ink2); overflow-wrap: anywhere; }
+.tabs { display: flex; gap: 22px; border-bottom: 1px solid var(--line); margin-block: 14px 20px; }
+.tab { appearance: none; background: none; border: 0; border-bottom: 3px solid transparent; padding: .55rem 0 .5rem; font-weight: 600; color: var(--ink2); cursor: pointer; margin-bottom: -1px; }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.stack { display: flex; flex-direction: column; gap: 22px; }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.stat b { display: block; font: 600 1.6rem/1.1 var(--font-ui); font-variant-numeric: tabular-nums; }
+.stat span { font: 400 .74rem/1.2 var(--font-mono); color: var(--ink2); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font: 400 .74rem/1.3 var(--font-mono); color: var(--ink2); margin-top: 8px; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; }
+.legend i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+.sect { display: flex; flex-direction: column; gap: 10px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { appearance: none; display: inline-flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: .45rem .8rem; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; text-align: left; min-height: 48px; }
+.chip b { font-weight: 600; overflow-wrap: anywhere; }
+.chip small { font: 500 .66rem/1 var(--font-mono); text-transform: uppercase; letter-spacing: .08em; color: var(--ink2); }
+.chip[data-m="q"] { border-color: var(--accent); background: var(--accent-soft); }
+.chip[data-m="q"] small { color: var(--accent); }
+.chip[data-m="-"] { border-style: dashed; opacity: .6; }
+.start { display: flex; flex-wrap: wrap; gap: 10px; }
+.start .btn { flex: 1 1 12rem; }
+
+/* Kartenliste */
+.clist { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+.crow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; align-items: start; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.cvals { display: grid; grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); gap: 6px 16px; min-width: 0; }
+.cv { min-width: 0; overflow-wrap: anywhere; }
+.cv small { display: block; font: 500 .64rem/1.3 var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink2); }
+.crow .lv { grid-column: 1 / -1; font: 400 .72rem/1.2 var(--font-mono); color: var(--ink2); }
+.ract { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.crow.editing { grid-template-columns: 1fr; }
+details { border-top: 1px solid var(--line); padding-block: 4px; }
+details > summary { cursor: pointer; font-weight: 600; padding: .6rem 0; list-style-position: outside; }
+details[open] > summary { margin-bottom: 8px; }
+.fieldrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }
+
+/* Lernsitzung */
+.studybar { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+.prog { flex: 1; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+.prog i { display: block; height: 100%; background: var(--accent); transition: width .25s ease; }
+.count { font: 500 .8rem/1 var(--font-mono); color: var(--ink2); font-variant-numeric: tabular-nums; }
+.card {
+  --lh: 36px;
+  position: relative;
+  background-color: var(--surface);
+  background-image: linear-gradient(to bottom, transparent calc(var(--lh) - 1px), var(--rule) calc(var(--lh) - 1px));
+  background-size: 100% var(--lh);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: var(--lh) 20px var(--lh) 3.4rem;
+  min-height: calc(var(--lh) * 6);
+  box-shadow: 0 1px 0 var(--line), 0 14px 26px -20px var(--shadow);
+}
+.card::before { content: ""; position: absolute; left: 2.5rem; top: 0; bottom: 0; width: 1px; background: var(--margin); }
+.card-meta { position: absolute; top: 0; left: 3.4rem; right: 20px; height: calc(var(--lh) - 1px); display: flex; align-items: center; justify-content: space-between; gap: 10px; font: 500 .68rem/1 var(--font-mono); letter-spacing: .07em; text-transform: uppercase; color: var(--ink2); }
+.row { display: grid; grid-template-columns: minmax(4.2rem, 6.2rem) minmax(0, 1fr); column-gap: 14px; align-items: baseline; }
+.lbl { font: 500 .66rem/var(--lh) var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink2); overflow-wrap: anywhere; }
+.val { font: 400 1.3rem/var(--lh) var(--font-card); overflow-wrap: anywhere; min-width: 0; }
+.val.big { font-size: 1.8rem; font-weight: 600; }
+.row.ans .val { color: var(--accent); }
+.gap { height: var(--lh); }
+.ans-in { width: 100%; height: var(--lh); border: 0; background: transparent; padding: 0; font: 400 1.3rem/var(--lh) var(--font-card); box-shadow: inset 0 -2px 0 var(--b1); border-radius: 0; min-width: 0; }
+.ans-in:focus { outline: none; box-shadow: inset 0 -2px 0 var(--accent); }
+.given.bad { text-decoration: line-through; color: var(--bad); }
+.given.ok { color: var(--good); }
+.correct { color: var(--accent); }
+.tag { font: 500 .66rem/1 var(--font-mono); letter-spacing: .06em; text-transform: uppercase; margin-left: .6rem; vertical-align: middle; }
+.tag.ok { color: var(--good); }
+.tag.bad { color: var(--bad); }
+.actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
+.actions.two { grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); }
+.g-no { border-color: var(--bad); color: var(--bad); }
+.g-mid { border-color: var(--mid); color: var(--mid); }
+.g-ok { border-color: var(--good); color: var(--good); }
+.chars { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.chr { min-width: 38px; height: 38px; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; font: 500 1.05rem var(--font-card); cursor: pointer; }
+.chr:hover { border-color: var(--accent); }
+
+/* Ergebnis */
+.result { display: flex; flex-direction: column; gap: 22px; }
+.tally { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.tally b { display: block; font: 600 2rem/1.1 var(--font-ui); font-variant-numeric: tabular-nums; }
+.tally .t-ok b { color: var(--good); }
+.tally .t-mid b { color: var(--mid); }
+.tally .t-no b { color: var(--bad); }
+.tally span { font: 400 .78rem/1.2 var(--font-mono); color: var(--ink2); }
+.misses { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+.miss { padding: 10px 0; border-bottom: 1px solid var(--line); display: grid; gap: 2px; }
+.miss b { font-family: var(--font-card); font-weight: 600; font-size: 1.1rem; }
+.miss span { font-family: var(--font-card); color: var(--accent); overflow-wrap: anywhere; }
+
+@media (max-width: 480px) {
+  .card { padding-right: 14px; padding-left: 2.9rem; }
+  .card::before { left: 2.1rem; }
+  .card-meta { left: 2.9rem; right: 14px; }
+  .val.big { font-size: 1.55rem; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 14px; }
+  .actions { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { .prog i { transition: none; } }
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <svg width="26" height="20" viewBox="0 0 26 20" aria-hidden="true" focusable="false">
+        <rect x="1" y="1" width="24" height="18" rx="2" fill="var(--surface)" stroke="var(--ink2)" stroke-width="1.4"/>
+        <line x1="1.7" y1="6" x2="24.3" y2="6" stroke="var(--margin)" stroke-width="1.2"/>
+        <line x1="5" y1="11" x2="21" y2="11" stroke="var(--b2)" stroke-width="1.2"/>
+        <line x1="5" y1="15" x2="16" y2="15" stroke="var(--b2)" stroke-width="1.2"/>
+      </svg>
+      <h1>Vokabel-Karteikasten</h1>
+    </div>
+    <div class="save" id="saveState" role="status" hidden><i></i><span></span></div>
+  </header>
+  <main id="view"></main>
+</div>
+
+<script>
+(function () {
+'use strict';
+
+/*LOGIC-START*/
+const DAY = 864e5;
+const INT = [0, 1, 3, 7, 14, 30];
+const MAXCARDS = 1000;
+
+function has(v) { return String(v == null ? '' : v).trim() !== ''; }
+function norm(s, lenient) {
+  let t = String(s == null ? '' : s).trim().toLowerCase().replace(/\s+/g, ' ').normalize('NFC');
+  if (lenient) t = t.normalize('NFD').replace(/[̀-ͯ]/g, '');
+  return t;
+}
+function alts(v) { return String(v == null ? '' : v).split(/\s*[\/;]\s*/).map(x => x.trim()).filter(Boolean); }
+function matches(input, expected, lenient) {
+  const u = norm(input, lenient);
+  if (!u) return false;
+  if (norm(expected, lenient) === u) return true;
+  return alts(expected).some(x => norm(x, lenient) === u);
+}
+function usable(c, dir) {
+  return dir.some((m, i) => m === 'q' && has(c.v[i])) && dir.some((m, i) => m === 'a' && has(c.v[i]));
+}
+function gradeCard(c, grade, now, plan) {
+  if (!plan) return;
+  c.s = (c.s || 0) + 1;
+  if (grade === 'ok') { c.ok = (c.ok || 0) + 1; c.b = Math.min((c.b || 0) + 1, 5); c.d = now + INT[c.b] * DAY; }
+  else if (grade === 'almost') { c.b = Math.max(c.b || 0, 1); c.d = now + DAY; }
+  else { c.no = (c.no || 0) + 1; c.b = 0; c.d = now; }
+}
+function counts(deck, now) {
+  let nw = 0, due = 0;
+  const dist = [0, 0, 0, 0, 0, 0];
+  for (const c of deck.cards) {
+    dist[c.b || 0]++;
+    if (!c.s) nw++; else if (c.d <= now) due++;
+  }
+  return { n: deck.cards.length, nw, due, dist };
+}
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+function buildQueue(deck, dir, source, now, newLimit) {
+  const ok = deck.cards.filter(c => usable(c, dir));
+  if (source === 'free') return shuffle(ok.map(c => c.i));
+  const due = ok.filter(c => c.s > 0 && c.d <= now).sort((a, b) => a.d - b.d);
+  const fresh = ok.filter(c => !c.s).slice(0, newLimit);
+  return shuffle(due.concat(fresh).map(c => c.i)).slice(0, 40);
+}
+function parseImport(text, nf) {
+  const rows = []; let cut = 0, bad = 0;
+  String(text).split(/\r?\n/).forEach(raw => {
+    const line = raw.trim();
+    if (!line) return;
+    const sep = line.includes('\t') ? '\t' : line.includes(';') ? ';' : line.includes('|') ? '|' : null;
+    if (!sep) { bad++; return; }
+    let p = line.split(sep).map(x => x.trim());
+    if (p.length > nf) { cut++; p = p.slice(0, nf); }
+    while (p.length < nf) p.push('');
+    if (p.filter(has).length < 2) { bad++; return; }
+    rows.push(p);
+  });
+  return { rows, cut, bad };
+}
+/*LOGIC-END*/
+
+/* ---------- Beispieldecks ---------- */
+const EXAMPLES = [
+  { key: 'la23', name: 'Latein · L. 23 Stammformen', fields: ['Deutsch', 'Infinitiv', 'Präsens', 'Perfekt', 'PPP'],
+    rows: 'Annehmen;accipere;accipio;accepi;acceptum\nLieben;amare;amo;amavi;amatum\nHerbeibringen;apportare;apporto;apportavi;apportatum\nHören;audire;audio;audivi;auditum\nFangen;capere;capio;cepi;captum\nSchreien;clamare;clamo;clamavi;clamatum\nGeben;dare;do;dedi;datum\nZurückgeben;reddere;reddo;reddidi;redditum\nVerteidigen;defendere;defendo;defensi;defensum\nFühren;ducere;duco;duxi;ductum\nErklären;explanare;explano;explanavi;explanatum\nBrechen;frangere;frango;fregi;fractum\nFragen;interrogare;interrogo;interrogavi;interrogatum\nEinladen;invitare;invito;invitavi;invitatum\nBefehlen;iubere;iubeo;iussi;iussum\nSchwören;iurare;iuro;iuravi;iuratum\nBefreien;liberare;libero;liberavi;liberatum\nSchicken;mittere;mitto;misi;missum\nErinnern;monere;moneo;monui;monitum\nBewegen;movere;moveo;movi;motum\nVerwandeln;mutare;muto;mutavi;mutatum\nTöten;necare;neco;necavi;necatum\n(Vor)bereiten;parare;paro;paravi;paratum\nTragen;portare;porto;portavi;portatum\nZurücklassen;relinquere;relinquo;reliqui;relictum\nFragen, Bitten;rogare;rogo;rogavi;rogatum\nBegrüßen;salutare;saluto;salutavi;salutatum\nRetten;servare;servo;servavi;servatum\nBetrachten, Anschauen;spectare;specto;spectavi;spectatum\nErwarten;exspectare;exspecto;exspectavi;exspectatum\nBesiegen;superare;supero;superavi;superatum\nBerühren;tangere;tango;tetigi;tactum\nRufen, Nennen;vocare;voco;vocavi;vocatum' },
+  { key: 'la', name: 'Latein · Unregelmäßige Verben (Beispiel)', fields: ['Deutsch', 'Präsens', 'Infinitiv', 'Perfekt', 'PPP'],
+    rows: 'sein;sum;esse;fui;\ngehen;eo;ire;ii / ivi;itum\ntragen, bringen;fero;ferre;tuli;latum\nwollen;volo;velle;volui;\nnicht wollen;nolo;nolle;nolui;\nlieber wollen;malo;malle;malui;\nkönnen;possum;posse;potui;\nmachen, tun;facio;facere;feci;factum\ngeben;do;dare;dedi;datum\nstehen;sto;stare;steti;statum\nsehen;video;videre;vidi;visum\nkommen;venio;venire;veni;ventum\nnehmen, fassen;capio;capere;cepi;captum\nsagen;dico;dicere;dixi;dictum\nführen;duco;ducere;duxi;ductum\nschreiben;scribo;scribere;scripsi;scriptum\nlesen;lego;legere;legi;lectum\nleben;vivo;vivere;vixi;victum\nbleiben;maneo;manere;mansi;mansum\nwissen;scio;scire;scivi;scitum\nfinden;invenio;invenire;inveni;inventum\nfliehen;fugio;fugere;fugi;\nfallen;cado;cadere;cecidi;casum\nvertreiben, schlagen;pello;pellere;pepuli;pulsum\nzurücklassen;relinquo;relinquere;reliqui;relictum\nbitten, erstreben;peto;petere;petivi;petitum' },
+  { key: 'en', name: 'Englisch · Unregelmäßige Verben (Beispiel)', fields: ['Deutsch', 'Infinitiv', 'Simple Past', 'Past Participle'],
+    rows: 'sein;be;was / were;been\ngehen;go;went;gone\nsehen;see;saw;seen\nkommen;come;came;come\nnehmen;take;took;taken\ngeben;give;gave;given\nschreiben;write;wrote;written\nsprechen;speak;spoke;spoken\nessen;eat;ate;eaten\ntrinken;drink;drank;drunk\nschwimmen;swim;swam;swum\nsingen;sing;sang;sung\nbringen;bring;brought;brought\nkaufen;buy;bought;bought\ndenken;think;thought;thought\nfinden;find;found;found\nwissen;know;knew;known\nschlafen;sleep;slept;slept\nfahren (Fahrzeug);drive;drove;driven\nbrechen;break;broke;broken\nwählen;choose;chose;chosen\nvergessen;forget;forgot;forgotten\nbeginnen;begin;began;begun\nfliegen;fly;flew;flown\nlesen;read;read;read\nschneiden;cut;cut;cut' },
+  { key: 'es', name: 'Spanisch · Grundwortschatz (Beispiel)', fields: ['Deutsch', 'Spanisch'],
+    rows: 'das Haus;la casa\ndas Wasser;el agua\nder Freund / die Freundin;el amigo / la amiga\ndie Straße;la calle\ndas Brot;el pan\ndie Zeit;el tiempo\ndas Buch;el libro\ndie Arbeit;el trabajo\ndas Essen;la comida\ndie Schule;la escuela\ndie Stadt;la ciudad\ndas Jahr;el año\nder Tag;el día\ndie Nacht;la noche\ndas Geld;el dinero' },
+  { key: 'esv', name: 'Spanisch · ser, estar, tener im Präsens (Beispiel)', fields: ['Person', 'ser', 'estar', 'tener'],
+    rows: 'yo;soy;estoy;tengo\ntú;eres;estás;tienes\nél / ella / usted;es;está;tiene\nnosotros;somos;estamos;tenemos\nvosotros;sois;estáis;tenéis\nellos / ellas / ustedes;son;están;tienen' }
+];
+const PRESETS = {
+  vocab: ['Deutsch', 'Fremdsprache'],
+  example: ['Deutsch', 'Fremdsprache', 'Beispielsatz'],
+  verbs: ['Bedeutung', 'Grundform', '2. Form', '3. Form'],
+  latin: ['Deutsch', 'Präsens', 'Infinitiv', 'Perfekt', 'PPP']
+};
+const CHARS = ['á', 'é', 'í', 'ó', 'ú', 'ü', 'ñ', '¿', '¡', 'ä', 'ö', 'ß', 'à', 'è', 'ù', 'â', 'ê', 'î', 'ô', 'û', 'ç', 'œ'];
+
+/* ---------- Zustand ---------- */
+const S = {
+  decks: [], settings: { newPerSession: 10, lenient: false },
+  view: { name: 'home' }, tab: 'learn', session: null,
+  ready: false, newOpen: false, free: false, chars: false,
+  editing: null, confirm: null, msg: null, filter: '', open: {}
+};
+const $ = (s, r) => (r || document).querySelector(s);
+const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const uid = () => Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
+const deckById = id => S.decks.find(d => d.id === id);
+const cardOf = (d, id) => d.cards.find(c => c.i === id);
+const curDeck = () => deckById(S.view.id);
+const BOXCOL = ['var(--b0)', 'var(--b1)', 'var(--b2)', 'var(--b3)', 'var(--b4)', 'var(--b5)'];
+const BOXNAME = ['Offen', 'Fach 1', 'Fach 2', 'Fach 3', 'Fach 4', 'Fach 5'];
+
+function newCard(v) { return { i: uid(), v: v.slice(), b: 0, d: 0, s: 0, ok: 0, no: 0 }; }
+function defaultDir(n) { return Array.from({ length: n }, (_, i) => i === 0 ? 'q' : 'a'); }
+function ensureDir(d) {
+  if (!Array.isArray(d.dir) || d.dir.length !== d.fields.length || d.dir.some(m => !['q', 'a', '-'].includes(m))) d.dir = defaultDir(d.fields.length);
+}
+function newDeck(name, fields, rows) {
+  const d = { id: uid(), name, fields, dir: defaultDir(fields.length), cards: [], u: Date.now() };
+  (rows || []).forEach(r => d.cards.push(newCard(r)));
+  return d;
+}
+
+/* ---------- Speichern: Konto-Datenbank, sonst Browser ---------- */
+const LS_KEY = 'vokabel-karteikasten.v1';
+const Store = { mode: 'local', col: null, dirty: new Set(), gone: new Set(), settingsDirty: false, timer: null, busy: false, again: false };
+function lsRead() { try { const r = localStorage.getItem(LS_KEY); return r ? JSON.parse(r) : null; } catch (e) { return null; } }
+function lsWrite() { try { localStorage.setItem(LS_KEY, JSON.stringify({ decks: S.decks, settings: S.settings })); } catch (e) { /* kein Browserspeicher */ } }
+function setSave(st) {
+  const el = $('#saveState'); if (!el) return;
+  const map = { local: 'Nur in diesem Browser gespeichert', saving: 'Speichert …', saved: 'Gespeichert', error: 'Speichern fehlgeschlagen' };
+  el.dataset.s = st;
+  $('span', el).textContent = map[st] || '';
+  el.hidden = !map[st];
+}
+function touch(deck) { if (deck) { deck.u = Date.now(); Store.dirty.add(deck.id); } persist(); }
+function persist() {
+  lsWrite();
+  if (Store.mode === 'cloud') setSave('saving');
+  clearTimeout(Store.timer);
+  Store.timer = setTimeout(flush, 700);
+}
+async function flush() {
+  clearTimeout(Store.timer);
+  if (Store.mode !== 'cloud') { Store.dirty.clear(); Store.gone.clear(); Store.settingsDirty = false; if (Store.ready) setSave('local'); return; }
+  if (Store.busy) { Store.again = true; return; }
+  Store.busy = true;
+  let failed = false;
+  try {
+    for (const id of Array.from(Store.dirty)) {
+      Store.dirty.delete(id);
+      const d = deckById(id);
+      if (d) { try { await Store.col.doc('deck_' + id).set(JSON.parse(JSON.stringify(d))); } catch (e) { Store.dirty.add(id); throw e; } }
+    }
+    for (const id of Array.from(Store.gone)) { Store.gone.delete(id); await Store.col.doc('deck_' + id).delete(); }
+    if (Store.settingsDirty) { Store.settingsDirty = false; await Store.col.doc('settings').set(JSON.parse(JSON.stringify(S.settings))); }
+  } catch (e) {
+    failed = true;
+    if (e && e.code === 'invalid_argument') { Store.mode = 'local'; setSave('local'); }
+    else setSave('error');
+  }
+  Store.busy = false;
+  if (!failed) setSave('saved');
+  if (Store.again && !failed) { Store.again = false; Store.timer = setTimeout(flush, 300); }
+}
+function withTimeout(p, ms) { return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]); }
+async function connectCloud() {
+  try {
+    if (!window.claude || !window.claude.use) return;
+    const [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+    if (!db || !user) return;
+    const id = await user.id();
+    if (!id) return;
+    const col = db.collection('data/users/' + id);
+    const snap = await withTimeout(col.get(), 10000);
+    const remote = []; let rs = null;
+    snap.docs.forEach(doc => {
+      const x = doc.data(); if (!x) return;
+      if (doc.id === 'settings') rs = x;
+      else if (doc.id.indexOf('deck_') === 0 && Array.isArray(x.cards) && Array.isArray(x.fields)) remote.push(JSON.parse(JSON.stringify(x)));
+    });
+    Store.col = col;
+    if (remote.length || rs) {
+      const local = new Map(S.decks.map(d => [d.id, d]));
+      const merged = remote.map(r => { const l = local.get(r.id); if (l && (l.u || 0) > (r.u || 0)) { Store.dirty.add(l.id); return l; } return r; });
+      if (S.touched) S.decks.forEach(l => { if (!merged.some(m => m.id === l.id)) { merged.push(l); Store.dirty.add(l.id); } });
+      S.decks = merged;
+      if (rs) Object.assign(S.settings, rs);
+      S.decks.forEach(ensureDir);
+    } else if (S.decks.length) {
+      S.decks.forEach(d => Store.dirty.add(d.id));
+      Store.settingsDirty = true;
+    }
+    Store.mode = 'cloud';
+    lsWrite();
+    if (Store.dirty.size || Store.settingsDirty) flush();
+  } catch (e) { /* bleibt beim Browserspeicher */ }
+}
+
+/* ---------- Ansichten ---------- */
+function bar(dist) {
+  const tot = dist.reduce((a, b) => a + b, 0) || 1;
+  return '<span class="boxbar" aria-hidden="true">' + dist.map((n, i) => n ? `<i style="flex:${n / tot};background:${BOXCOL[i]}"></i>` : '').join('') + '</span>';
+}
+function planCount(d, now) { ensureDir(d); return buildQueue(d, d.dir, 'plan', now, S.settings.newPerSession).length; }
+
+function viewHome() {
+  if (!S.ready) return '<p class="muted">Decks werden geladen …</p>';
+  const now = Date.now();
+  let out = '';
+  if (!S.decks.length) {
+    out += `<section class="intro"><h2>Vokabeln und Formen sicher merken</h2><p>Lege ein Deck an, trage Karten ein und übe sie mit Karteikarten oder durch Eintippen. Was du kannst, kommt seltener dran. Was du vergisst, kommt öfter.</p></section>`;
+  } else {
+    const t = S.decks.reduce((a, d) => a + planCount(d, now), 0);
+    out += `<section class="intro"><h2>${t ? `Heute dran: ${t} ${t === 1 ? 'Karte' : 'Karten'}` : 'Heute ist nichts mehr fällig'}</h2><p>${t ? 'Öffne ein Deck und starte die Sitzung.' : 'Du kannst trotzdem frei üben oder neue Karten anlegen.'}</p></section>`;
+    out += '<div class="decks">' + S.decks.map(d => {
+      const c = counts(d, now);
+      return `<button class="deck" data-act="open" data-id="${esc(d.id)}">
+        <span><span class="deck-name">${esc(d.name)}</span><span class="deck-meta">${c.n} Karten · ${esc(d.fields.join(' / '))}</span></span>
+        <span class="deck-today"><b>${planCount(d, now)}</b>heute</span>
+        ${bar(c.dist)}</button>`;
+    }).join('') + '</div>';
+  }
+  if (S.newOpen) {
+    out += `<section class="panel" style="margin-top:20px" aria-label="Neues Deck">
+      <h3>Neues Deck</h3>
+      <div class="field"><label for="newName">Name</label><input class="in" id="newName" maxlength="60" placeholder="z. B. Französisch · Lektion 4" autocomplete="off"></div>
+      <div class="field"><label for="newPreset">Vorlage</label>
+        <select class="in" id="newPreset">
+          <option value="vocab">Vokabeln (Deutsch, Fremdsprache)</option>
+          <option value="example">Vokabeln mit Beispielsatz</option>
+          <option value="latin">Latein: Stammformen (Präsens, Infinitiv, Perfekt, PPP)</option>
+          <option value="verbs">Verbformen (Bedeutung und drei Formen)</option>
+          <option value="custom">Eigene Felder</option>
+        </select></div>
+      <div class="field"><label for="newFields">Felder, durch Komma getrennt (2 bis 6)</label><input class="in" id="newFields" value="${esc(PRESETS.vocab.join(', '))}" autocomplete="off"></div>
+      <p class="err" id="newErr" role="alert"></p>
+      <div class="row-actions"><button class="btn primary" data-act="create-deck">Deck anlegen</button><button class="btn" data-act="cancel-new">Abbrechen</button></div>
+    </section>`;
+  } else {
+    out += `<div class="below"><button class="btn primary" data-act="new-deck">Neues Deck</button>`;
+    const free = EXAMPLES.filter(e => !S.decks.some(d => d.x === e.key));
+    if (free.length) out += free.map(e => `<button class="link" data-act="load-example" data-ex="${e.key}">${esc(e.name.replace(' (Beispiel)', ''))} hinzufügen</button>`).join('');
+    out += '</div>';
+  }
+  return out;
+}
+
+function viewDeck() {
+  const d = curDeck();
+  if (!d) { S.view = { name: 'home' }; return viewHome(); }
+  ensureDir(d);
+  return `<div class="crumb"><button class="link" data-act="home">‹ Alle Decks</button></div>
+    <div class="deck-head"><h2>${esc(d.name)}</h2><p>${d.cards.length} Karten · ${esc(d.fields.join(' / '))}</p></div>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" data-act="tab" data-tab="learn" aria-selected="${S.tab === 'learn'}">Üben</button>
+      <button class="tab" role="tab" data-act="tab" data-tab="cards" aria-selected="${S.tab === 'cards'}">Karten</button>
+    </div>` + (S.tab === 'learn' ? tabLearn(d) : tabCards(d));
+}
+
+function tabLearn(d) {
+  const now = Date.now(), c = counts(d, now);
+  const src = S.free ? 'free' : 'plan';
+  const q = buildQueue(d, d.dir, src, now, S.settings.newPerSession).length;
+  const hasQ = d.dir.includes('q'), hasA = d.dir.includes('a');
+  let note = '';
+  if (!d.cards.length) note = 'Dieses Deck ist noch leer. Füge im Reiter „Karten“ Karten hinzu.';
+  else if (!hasQ || !hasA) note = 'Wähle mindestens ein Feld als Frage und eines als Antwort.';
+  else if (!q) note = S.free ? 'Mit dieser Zuordnung gibt es keine passenden Karten.' : 'Heute ist hier nichts fällig. Du kannst trotzdem alle Karten üben.';
+  const dis = q ? '' : ' disabled';
+  const mlabel = { q: 'Frage', a: 'Antwort', '-': 'aus' };
+  return `<div class="stack">
+    <div><div class="stats">
+      <div class="stat"><b>${planCount(d, now)}</b><span>heute dran</span></div>
+      <div class="stat"><b>${c.due}</b><span>fällig</span></div>
+      <div class="stat"><b>${c.nw}</b><span>neu</span></div>
+      <div class="stat"><b>${c.n}</b><span>Karten</span></div></div>
+      <div style="margin-top:14px">${bar(c.dist)}</div>
+      <div class="legend">${c.dist.map((n, i) => `<span><i style="background:${BOXCOL[i]}"></i>${BOXNAME[i]} ${n}</span>`).join('')}</div></div>
+    <div class="sect"><span class="lab">Was wird gefragt? Tippe ein Feld an, um es zu wechseln.</span>
+      <div class="chips">${d.fields.map((f, i) => `<button class="chip" data-act="chip" data-i="${i}" data-m="${d.dir[i]}"><b>${esc(f)}</b><small>${mlabel[d.dir[i]]}</small></button>`).join('')}</div>
+      <div><button class="link" data-act="swap">Richtung umkehren</button></div></div>
+    <div class="sect">
+      <label class="check"><input type="checkbox" id="optFree"${S.free ? ' checked' : ''}><span>Alle Karten üben<br><span class="muted" style="font-size:.85rem">Der Lernplan bleibt dabei unverändert.</span></span></label>
+      <div class="start">
+        <button class="btn primary" data-act="start" data-mode="flip"${dis}>Karteikarten${q ? ` (${q})` : ''}</button>
+        <button class="btn" data-act="start" data-mode="type"${dis}>Eintippen${q ? ` (${q})` : ''}</button></div>
+      ${note ? `<p class="muted" style="font-size:.9rem">${esc(note)}</p>` : ''}</div>
+    <div class="panel">
+      <div class="field"><label for="optNew">Neue Karten pro Sitzung</label>
+        <select class="in" id="optNew">${[5, 10, 20, 40].map(n => `<option value="${n}"${S.settings.newPerSession === n ? ' selected' : ''}>${n}</option>`).join('')}</select></div>
+      <label class="check"><input type="checkbox" id="optLenient"${S.settings.lenient ? ' checked' : ''}><span>Akzente beim Eintippen ignorieren<br><span class="muted" style="font-size:.85rem">„cafe“ gilt dann auch für „café“.</span></span></label>
+    </div></div>`;
+}
+
+function rowHtml(d, c) {
+  if (S.editing === c.i) {
+    return `<div class="crow editing" data-id="${esc(c.i)}"><div class="grid2">${d.fields.map((f, i) => `<div class="field"><label for="ed-${i}">${esc(f)}</label><input class="in" id="ed-${i}" data-enter="edit" value="${esc(c.v[i])}" autocomplete="off" autocapitalize="off" spellcheck="false"></div>`).join('')}</div>
+      <div class="row-actions"><button class="btn primary sm" data-act="save-edit">Speichern</button><button class="btn sm" data-act="cancel-edit">Abbrechen</button></div></div>`;
+  }
+  const armed = S.confirm === 'c:' + c.i;
+  const lv = !c.s ? 'neu' : c.b === 0 ? 'offen' : 'Fach ' + c.b;
+  return `<div class="crow"><div class="cvals">${d.fields.map((f, i) => has(c.v[i]) ? `<div class="cv"><small>${esc(f)}</small>${esc(c.v[i])}</div>` : '').join('')}</div>
+    <div class="ract"><button class="btn sm" data-act="edit" data-id="${esc(c.i)}">Ändern</button><button class="btn sm danger${armed ? ' armed' : ''}" data-act="del-card" data-id="${esc(c.i)}">${armed ? 'Wirklich?' : 'Löschen'}</button></div>
+    <span class="lv">${lv}</span></div>`;
+}
+function listHtml(d) {
+  const q = norm(S.filter);
+  const all = q ? d.cards.filter(c => c.v.some(x => norm(x).includes(q))) : d.cards;
+  if (!all.length) return `<p class="muted" style="padding:14px 0">${d.cards.length ? 'Keine Karte passt zur Suche.' : 'Noch keine Karten. Trage oben die erste ein.'}</p>`;
+  const shown = all.slice(0, 200);
+  return '<div class="clist">' + shown.map(c => rowHtml(d, c)).join('') + '</div>' + (all.length > shown.length ? `<p class="muted" style="padding:12px 0;font-size:.9rem">${all.length - shown.length} weitere Karten. Nutze die Suche, um sie zu finden.</p>` : '');
+}
+function tabCards(d) {
+  const o = k => S.open[k] ? ' open' : '';
+  const armedF = i => S.confirm === 'f:' + i;
+  return `<div class="stack">
+    <div id="msg" role="status">${S.msg ? `<div class="msg ${S.msg.tone}">${esc(S.msg.text)}</div>` : ''}</div>
+    <section class="panel" aria-label="Neue Karte"><h3>Neue Karte</h3>
+      <div class="grid2">${d.fields.map((f, i) => `<div class="field"><label for="add-${i}">${esc(f)}</label><input class="in" id="add-${i}" data-enter="add" autocomplete="off" autocapitalize="off" spellcheck="false"></div>`).join('')}</div>
+      <p class="muted" style="font-size:.85rem">Mehrere richtige Antworten trennst du mit „ / “, zum Beispiel „was / were“.</p>
+      <div><button class="btn primary" data-act="add-card">Karte hinzufügen</button></div></section>
+    <div class="sect"><div class="field"><label for="filter">Suchen</label><input class="in" id="filter" type="search" value="${esc(S.filter)}" placeholder="${d.cards.length} Karten durchsuchen" autocomplete="off"></div>
+      <div id="cardlist">${listHtml(d)}</div></div>
+    <div>
+      <details data-key="fields"${o('fields')}><summary>Name und Felder</summary>
+        <div class="stack" style="gap:14px">
+          <div class="field"><label for="deckName">Deckname</label><input class="in" id="deckName" value="${esc(d.name)}" maxlength="60" autocomplete="off"></div>
+          ${d.fields.map((f, i) => `<div class="fieldrow"><div class="field"><label for="fn-${i}">Feld ${i + 1}</label><input class="in" id="fn-${i}" value="${esc(f)}" maxlength="30" autocomplete="off"></div>${d.fields.length > 2 ? `<button class="btn sm danger${armedF(i) ? ' armed' : ''}" data-act="del-field" data-i="${i}">${armedF(i) ? 'Wirklich?' : 'Entfernen'}</button>` : '<span></span>'}</div>`).join('')}
+          <div class="row-actions"><button class="btn primary sm" data-act="save-struct">Speichern</button><button class="btn sm" data-act="add-field"${d.fields.length >= 6 ? ' disabled' : ''}>Feld hinzufügen</button></div>
+        </div></details>
+      <details data-key="imp"${o('imp')}><summary>Import und Export</summary>
+        <div class="stack" style="gap:14px">
+          <div class="field"><label for="impText">Karten einfügen, eine pro Zeile</label>
+            <textarea class="in" id="impText" spellcheck="false" placeholder="${esc(d.fields.join(' ; '))}"></textarea></div>
+          <p class="muted" style="font-size:.85rem">Reihenfolge: ${esc(d.fields.join(' ; '))}. Felder mit Tab oder Semikolon trennen. Aus Excel oder Numbers kannst du Zellen direkt einfügen. Pro Deck sind ${MAXCARDS} Karten möglich.</p>
+          <div class="row-actions"><button class="btn primary sm" data-act="import">Importieren</button><button class="btn sm" data-act="export">Alle Karten als Text kopieren</button></div>
+          <textarea class="in" id="expText" readonly hidden aria-label="Exportierter Text"></textarea>
+        </div></details>
+      <details data-key="danger"${o('danger')}><summary>Fortschritt und Löschen</summary>
+        <div class="row-actions">
+          <button class="btn sm danger${S.confirm === 'reset' ? ' armed' : ''}" data-act="reset">${S.confirm === 'reset' ? 'Wirklich zurücksetzen?' : 'Fortschritt zurücksetzen'}</button>
+          <button class="btn sm danger${S.confirm === 'deck' ? ' armed' : ''}" data-act="del-deck">${S.confirm === 'deck' ? 'Deck wirklich löschen?' : 'Deck löschen'}</button>
+        </div></details>
+    </div></div>`;
+}
+
+function answerFields(dir, card) { return dir.map((m, i) => m === 'a' && has(card.v[i]) ? i : -1).filter(i => i >= 0); }
+function promptFields(dir, card) { return dir.map((m, i) => m === 'q' && has(card.v[i]) ? i : -1).filter(i => i >= 0); }
+
+function viewStudy() {
+  const s = S.session, d = deckById(s.deckId), card = cardOf(d, s.queue[s.pos]);
+  const qs = promptFields(s.dir, card), as = answerFields(s.dir, card);
+  const pct = Math.round(s.pos / s.queue.length * 100);
+  const lvl = !card.s ? 'Neu' : card.b === 0 ? 'Offen' : 'Fach ' + card.b;
+  const again = s.graded.has(card.i);
+  let rows = qs.map((i, k) => `<div class="row"><span class="lbl">${esc(d.fields[i])}</span><span class="val${k === 0 ? ' big' : ''}">${esc(card.v[i])}</span></div>`).join('');
+  let actions = '';
+  if (s.mode === 'flip') {
+    if (s.revealed) {
+      rows += '<div class="gap"></div>' + as.map(i => `<div class="row ans"><span class="lbl">${esc(d.fields[i])}</span><span class="val">${esc(card.v[i])}</span></div>`).join('');
+      actions = `<div class="actions"><button class="btn g-no" data-act="grade" data-g="no">Nicht gewusst<kbd>1</kbd></button><button class="btn g-mid" data-act="grade" data-g="almost">Fast<kbd>2</kbd></button><button class="btn g-ok" data-act="grade" data-g="ok">Gewusst<kbd>3</kbd></button></div>`;
+    } else {
+      actions = `<div class="actions" style="grid-template-columns:1fr"><button class="btn primary wide" data-act="reveal">Antwort zeigen<kbd>Leertaste</kbd></button></div>`;
+    }
+  } else if (!s.checked) {
+    rows += '<div class="gap"></div>' + as.map(i => `<div class="row"><label class="lbl" for="ans-${i}">${esc(d.fields[i])}</label><input class="ans-in" id="ans-${i}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done"></div>`).join('');
+    actions = `<div class="actions two"><button class="btn primary" data-act="check">Prüfen<kbd>Enter</kbd></button><button class="btn" data-act="idk">Weiß ich nicht</button></div>
+      <div><button class="link" data-act="chars">Sonderzeichen ${S.chars ? 'ausblenden' : 'einblenden'}</button>${S.chars ? `<div class="chars">${CHARS.map(c => `<button class="chr" data-act="ins" data-c="${c}" aria-label="Zeichen ${c} einfügen">${c}</button>`).join('')}</div>` : ''}</div>`;
+  } else {
+    const ck = s.checked;
+    rows += '<div class="gap"></div>' + as.map((i, k) => {
+      const ok = ck.oks[k], given = ck.vals[k];
+      return `<div class="row"><span class="lbl">${esc(d.fields[i])}</span><span class="val">${ok
+        ? `<span class="given ok">${esc(given)}</span><span class="tag ok">${ck.manual ? 'als richtig gewertet' : 'richtig'}</span>`
+        : `<span class="given bad">${esc(given || 'leer')}</span><span class="tag bad">falsch</span><br><span class="correct">${esc(card.v[i])}</span>`}</span></div>`;
+    }).join('');
+    actions = `<div class="actions two"><button class="btn primary" id="btnNext" data-act="next">Weiter<kbd>Enter</kbd></button>${ck.ok ? '' : '<button class="btn" data-act="override">War doch richtig</button>'}</div>`;
+  }
+  return `<div class="studybar"><button class="link" data-act="quit">‹ Beenden</button>
+      <div class="prog" role="progressbar" aria-label="Fortschritt" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i style="width:${pct}%"></i></div>
+      <span class="count">${Math.min(s.pos + 1, s.queue.length)} / ${s.queue.length}</span></div>
+    <section class="card" aria-live="polite"><div class="card-meta"><span>${lvl}</span><span>${again ? 'Wiederholung' : s.plan ? 'Lernplan' : 'Freies Üben'}</span></div>${rows}</section>
+    ${actions}`;
+}
+
+function viewSummary() {
+  const s = S.session, d = deckById(s.deckId);
+  if (!d) { S.view = { name: 'home' }; return viewHome(); }
+  const r = s.results, tot = r.ok + r.almost + r.no;
+  const misses = s.misses.map(id => cardOf(d, id)).filter(Boolean);
+  const show = c => {
+    const q = promptFields(s.dir, c).map(i => esc(c.v[i])).join(' · ');
+    const a = answerFields(s.dir, c).map(i => esc(c.v[i])).join(' · ');
+    return `<div class="miss"><b>${q}</b><span>${a}</span></div>`;
+  };
+  return `<div class="result">
+    <div class="deck-head"><h2>${tot ? 'Sitzung beendet' : 'Keine Karten'}</h2><p>${esc(d.name)} · ${s.plan ? 'Lernplan aktualisiert' : 'Freies Üben, Lernplan unverändert'}</p></div>
+    <div class="tally"><div class="t-ok"><b>${r.ok}</b><span>gewusst</span></div><div class="t-mid"><b>${r.almost}</b><span>fast</span></div><div class="t-no"><b>${r.no}</b><span>nicht gewusst</span></div></div>
+    ${misses.length ? `<div class="sect"><h3>Noch nicht sicher</h3><div class="misses">${misses.map(show).join('')}</div></div>` : (tot ? '<p class="muted">Alles gewusst. Die nächsten Termine stehen im Lernplan.</p>' : '')}
+    <div class="row-actions">${misses.length ? '<button class="btn primary" data-act="retry">Diese Karten nochmal üben</button>' : ''}<button class="btn${misses.length ? '' : ' primary'}" data-act="back-deck">Zurück zum Deck</button></div></div>`;
+}
+
+/* ---------- Rendern ---------- */
+function render(focusId) {
+  const v = $('#view');
+  const html = S.view.name === 'home' ? viewHome() : S.view.name === 'deck' ? viewDeck() : S.view.name === 'study' ? viewStudy() : viewSummary();
+  v.innerHTML = html;
+  if (focusId) { const el = document.getElementById(focusId); if (el) el.focus(); }
+  else if (S.view.name === 'study' && S.session && S.session.mode === 'type' && !S.session.checked) { const f = $('.ans-in'); if (f) f.focus(); }
+}
+function go(view, tab) {
+  S.view = view; if (tab) S.tab = tab;
+  S.msg = null; S.editing = null; S.confirm = null; S.filter = '';
+  render(); window.scrollTo(0, 0);
+}
+function flash(text, tone) {
+  S.msg = { text, tone: tone || 'ok' };
+  const m = $('#msg'); if (m) m.innerHTML = `<div class="msg ${S.msg.tone}">${esc(text)}</div>`;
+}
+function readStruct(d) {
+  const n = $('#deckName'); if (n && has(n.value)) d.name = n.value.trim();
+  d.fields = d.fields.map((f, i) => { const el = $('#fn-' + i); return el && has(el.value) ? el.value.trim() : f; });
+}
+
+/* ---------- Sitzung ---------- */
+function startSession(d, mode, ids, plan) {
+  if (!ids.length) return;
+  ensureDir(d);
+  S.session = { deckId: d.id, mode, plan, dir: d.dir.slice(), queue: ids.slice(), pos: 0, revealed: false, checked: null,
+    results: { ok: 0, almost: 0, no: 0 }, graded: new Set(), misses: [], retry: {} };
+  S.touched = true;
+  S.view = { name: 'study' };
+  render(); window.scrollTo(0, 0);
+}
+function commit(grade) {
+  const s = S.session, d = deckById(s.deckId), card = cardOf(d, s.queue[s.pos]);
+  if (!s.graded.has(card.i)) {
+    s.graded.add(card.i);
+    s.results[grade]++;
+    if (s.plan) { gradeCard(card, grade, Date.now(), true); touch(d); }
+    if (grade === 'no') s.misses.push(card.i);
+  }
+  if (grade === 'no') {
+    const n = s.retry[card.i] || 0;
+    if (n < 2) { s.retry[card.i] = n + 1; s.queue.splice(Math.min(s.queue.length, s.pos + 4), 0, card.i); }
+  }
+  s.pos++; s.revealed = false; s.checked = null;
+  if (s.pos >= s.queue.length) { S.view = { name: 'summary' }; render(); window.scrollTo(0, 0); }
+  else render();
+}
+function check(idk) {
+  const s = S.session, d = deckById(s.deckId), card = cardOf(d, s.queue[s.pos]);
+  const as = answerFields(s.dir, card);
+  const vals = as.map(i => { const el = document.getElementById('ans-' + i); return idk || !el ? '' : el.value.trim(); });
+  const oks = as.map((i, k) => !idk && matches(vals[k], card.v[i], S.settings.lenient));
+  s.checked = { as, vals, oks, ok: oks.every(Boolean), manual: false };
+  render('btnNext');
+}
+
+/* ---------- Aktionen ---------- */
+const ACT = {
+  'new-deck'() { S.newOpen = true; render('newName'); },
+  'cancel-new'() { S.newOpen = false; render(); },
+  'create-deck'() {
+    const name = ($('#newName').value || '').trim() || 'Neues Deck';
+    const fields = Array.from(new Set(($('#newFields').value || '').split(',').map(x => x.trim()).filter(Boolean))).slice(0, 6);
+    if (fields.length < 2) { $('#newErr').textContent = 'Gib mindestens zwei verschiedene Felder an, durch Komma getrennt.'; return; }
+    const d = newDeck(name, fields, []);
+    S.decks.push(d); S.touched = true; touch(d); S.newOpen = false;
+    go({ name: 'deck', id: d.id }, 'cards'); render('add-0');
+  },
+  'open'(t) { go({ name: 'deck', id: t.dataset.id }, 'learn'); },
+  'load-example'(t) {
+    const ex = EXAMPLES.find(x => x.key === t.dataset.ex); if (!ex) return;
+    const d = newDeck(ex.name, ex.fields.slice(), parseImport(ex.rows, ex.fields.length).rows);
+    d.x = ex.key; S.decks.push(d); S.touched = true; touch(d); render();
+  },
+  'home'() { go({ name: 'home' }); },
+  'tab'(t) { go(S.view, t.dataset.tab); },
+  'chip'(t) {
+    const d = curDeck(), i = +t.dataset.i;
+    d.dir[i] = { q: 'a', a: '-', '-': 'q' }[d.dir[i]]; touch(d); render();
+  },
+  'swap'() { const d = curDeck(); d.dir = d.dir.map(m => m === 'q' ? 'a' : m === 'a' ? 'q' : m); touch(d); render(); },
+  'start'(t) {
+    const d = curDeck(), plan = !S.free;
+    startSession(d, t.dataset.mode, buildQueue(d, d.dir, plan ? 'plan' : 'free', Date.now(), S.settings.newPerSession), plan);
+  },
+  'add-card'() {
+    const d = curDeck();
+    const v = d.fields.map((_, i) => ($('#add-' + i).value || '').trim());
+    if (v.filter(has).length < 2) return flash('Trage mindestens zwei Felder ein.', 'bad');
+    if (d.cards.length >= MAXCARDS) return flash('Dieses Deck hat die Höchstzahl von ' + MAXCARDS + ' Karten erreicht.', 'bad');
+    d.cards.unshift(newCard(v)); S.touched = true; touch(d);
+    S.msg = { tone: 'ok', text: 'Karte hinzugefügt.' }; render('add-0');
+  },
+  'edit'(t) { S.editing = t.dataset.id; S.confirm = null; render('ed-0'); },
+  'cancel-edit'() { S.editing = null; render(); },
+  'save-edit'() {
+    const d = curDeck(), c = cardOf(d, S.editing);
+    const v = d.fields.map((_, i) => ($('#ed-' + i).value || '').trim());
+    if (v.filter(has).length < 2) return flash('Eine Karte braucht mindestens zwei ausgefüllte Felder.', 'bad');
+    c.v = v; touch(d); S.editing = null; render();
+  },
+  'del-card'(t) {
+    const d = curDeck(), key = 'c:' + t.dataset.id;
+    if (S.confirm !== key) { S.confirm = key; return render(); }
+    d.cards = d.cards.filter(c => c.i !== t.dataset.id); S.confirm = null; touch(d); render();
+  },
+  'import'() {
+    const d = curDeck(), r = parseImport($('#impText').value, d.fields.length);
+    if (!r.rows.length) return flash('Keine Karten erkannt. Pro Zeile eine Karte, Felder mit Tab oder Semikolon getrennt, mindestens zwei ausgefüllt.', 'bad');
+    const key = row => row.map(x => norm(x)).join('\u0001');
+    const have = new Set(d.cards.map(c => key(c.v)));
+    let added = 0, dup = 0;
+    for (const row of r.rows) {
+      if (have.has(key(row))) { dup++; continue; }
+      if (d.cards.length >= MAXCARDS) break;
+      have.add(key(row)); d.cards.push(newCard(row)); added++;
+    }
+    S.touched = true; touch(d); S.open.imp = true;
+    const extra = [dup ? dup + ' doppelte übersprungen' : '', r.cut ? r.cut + ' Zeilen mit zu vielen Spalten gekürzt' : '', r.bad ? r.bad + ' Zeilen nicht erkannt' : ''].filter(Boolean).join(', ');
+    S.msg = { tone: added ? 'ok' : 'bad', text: added + ' Karten importiert' + (extra ? ' (' + extra + ')' : '') + '.' };
+    render();
+  },
+  'export'() {
+    const d = curDeck(), text = d.cards.map(c => c.v.join('\t')).join('\n'), ta = $('#expText');
+    ta.hidden = false; ta.value = text; ta.focus(); ta.select();
+    try { navigator.clipboard.writeText(text).then(() => flash('In die Zwischenablage kopiert.'), () => flash('Text ist markiert. Kopiere ihn mit Strg+C oder Cmd+C.')); }
+    catch (e) { flash('Text ist markiert. Kopiere ihn mit Strg+C oder Cmd+C.'); }
+  },
+  'save-struct'() { const d = curDeck(); readStruct(d); touch(d); S.open.fields = true; S.msg = { tone: 'ok', text: 'Name und Felder gespeichert.' }; render(); },
+  'add-field'() {
+    const d = curDeck(); if (d.fields.length >= 6) return;
+    readStruct(d); d.fields.push('Feld ' + (d.fields.length + 1)); d.cards.forEach(c => c.v.push('')); d.dir.push('a');
+    touch(d); S.open.fields = true; render();
+  },
+  'del-field'(t) {
+    const d = curDeck(), i = +t.dataset.i;
+    if (S.confirm !== 'f:' + i) { readStruct(d); S.confirm = 'f:' + i; S.open.fields = true; return render(); }
+    readStruct(d); d.fields.splice(i, 1); d.cards.forEach(c => c.v.splice(i, 1)); d.dir.splice(i, 1); ensureDir(d);
+    S.confirm = null; touch(d); S.open.fields = true; render();
+  },
+  'reset'() {
+    const d = curDeck();
+    if (S.confirm !== 'reset') { S.confirm = 'reset'; S.open.danger = true; return render(); }
+    d.cards.forEach(c => { c.b = 0; c.d = 0; c.s = 0; c.ok = 0; c.no = 0; });
+    S.confirm = null; touch(d); S.open.danger = true; S.msg = { tone: 'ok', text: 'Fortschritt zurückgesetzt.' }; render();
+  },
+  'del-deck'() {
+    const d = curDeck();
+    if (S.confirm !== 'deck') { S.confirm = 'deck'; S.open.danger = true; return render(); }
+    S.decks = S.decks.filter(x => x.id !== d.id); Store.dirty.delete(d.id); Store.gone.add(d.id); S.touched = true; persist(); go({ name: 'home' });
+  },
+  'reveal'() { S.session.revealed = true; render(); },
+  'grade'(t) { commit(t.dataset.g); },
+  'check'() { check(false); },
+  'idk'() { check(true); },
+  'next'() { commit(S.session.checked.ok ? 'ok' : 'no'); },
+  'override'() { const k = S.session.checked; k.ok = true; k.manual = true; k.oks = k.oks.map(() => true); render('btnNext'); },
+  'chars'() { S.chars = !S.chars; const keep = S.lastInput; render(); if (keep) { const el = document.getElementById(keep.id); if (el) el.focus(); } },
+  'ins'(t) {
+    const el = S.lastInput && document.getElementById(S.lastInput.id); if (!el) return;
+    const a = el.selectionStart == null ? el.value.length : el.selectionStart, b = el.selectionEnd == null ? a : el.selectionEnd;
+    el.setRangeText(t.dataset.c, a, b, 'end'); el.focus();
+  },
+  'quit'() { go({ name: 'deck', id: S.session.deckId }, 'learn'); },
+  'retry'() {
+    const s = S.session, d = deckById(s.deckId);
+    startSession(d, s.mode, s.misses.filter(id => cardOf(d, id)), false);
+  },
+  'back-deck'() { go({ name: 'deck', id: S.session.deckId }, 'learn'); }
+};
+
+const view = $('#view');
+view.addEventListener('click', e => {
+  const t = e.target.closest('[data-act]');
+  if (!t || t.disabled) return;
+  const f = ACT[t.dataset.act]; if (f) f(t, e);
+});
+view.addEventListener('mousedown', e => { if (e.target.closest('.chr')) e.preventDefault(); });
+view.addEventListener('focusin', e => { if (e.target.matches && e.target.matches('.ans-in')) S.lastInput = e.target; });
+view.addEventListener('toggle', e => { const k = e.target.dataset && e.target.dataset.key; if (k) S.open[k] = e.target.open; }, true);
+view.addEventListener('input', e => {
+  if (e.target.id === 'filter') { S.filter = e.target.value; const d = curDeck(); if (d) $('#cardlist').innerHTML = listHtml(d); }
+});
+view.addEventListener('change', e => {
+  const t = e.target;
+  if (t.id === 'newPreset') { const p = PRESETS[t.value]; if (p) $('#newFields').value = p.join(', '); else { $('#newFields').value = ''; $('#newFields').focus(); } }
+  else if (t.id === 'optFree') { S.free = t.checked; render(); }
+  else if (t.id === 'optNew') { S.settings.newPerSession = +t.value; Store.settingsDirty = true; persist(); render(); }
+  else if (t.id === 'optLenient') { S.settings.lenient = t.checked; Store.settingsDirty = true; persist(); }
+});
+view.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  const t = e.target;
+  if (t.matches && t.matches('.ans-in')) {
+    e.preventDefault();
+    const ins = $$('.ans-in'), k = ins.indexOf(t);
+    if (k < ins.length - 1) ins[k + 1].focus(); else check(false);
+  } else if (t.dataset && t.dataset.enter) {
+    e.preventDefault();
+    const sel = t.dataset.enter === 'add' ? '[data-enter="add"]' : '[data-enter="edit"]';
+    const ins = $$(sel), k = ins.indexOf(t);
+    if (k < ins.length - 1) ins[k + 1].focus(); else (t.dataset.enter === 'add' ? ACT['add-card'] : ACT['save-edit'])();
+  }
+});
+document.addEventListener('keydown', e => {
+  if (S.view.name !== 'study' || !S.session || e.metaKey || e.ctrlKey || e.altKey) return;
+  const s = S.session, tag = e.target.tagName || '';
+  if (s.mode === 'flip') {
+    if (s.revealed) { const g = { '1': 'no', '2': 'almost', '3': 'ok' }[e.key]; if (g) { e.preventDefault(); commit(g); } }
+    else if ((e.key === ' ' || e.key === 'Enter') && tag !== 'BUTTON') { e.preventDefault(); s.revealed = true; render(); }
+  } else if (s.checked && e.key === 'Enter' && tag !== 'BUTTON') { e.preventDefault(); ACT.next(); }
+});
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && (Store.dirty.size || Store.gone.size || Store.settingsDirty)) flush(); });
+window.addEventListener('pagehide', () => { if (Store.mode === 'cloud' && (Store.dirty.size || Store.gone.size)) flush(); });
+
+/* ---------- Start ---------- */
+(async function init() {
+  const local = lsRead();
+  if (local && Array.isArray(local.decks)) {
+    S.decks = local.decks.filter(d => d && Array.isArray(d.cards) && Array.isArray(d.fields));
+    S.decks.forEach(ensureDir);
+    Object.assign(S.settings, local.settings || {});
+    S.ready = true;
+  }
+  render();
+  await connectCloud();
+  S.ready = true; Store.ready = true;
+  setSave(Store.mode === 'cloud' ? 'saved' : 'local');
+  if (S.view.name === 'home' || S.view.name === 'deck') {
+    if (S.view.name === 'deck' && !curDeck()) S.view = { name: 'home' };
+    const ae = document.activeElement;
+    if (!(ae && ae.matches && ae.matches('input,textarea,select'))) render();
+  }
+})();
+})();
+</script>
